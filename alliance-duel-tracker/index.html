@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111513">
+  <title>Alliance Duel Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Saira+Condensed:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/tables.css">
+  <link rel="stylesheet" href="css/dialogs.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Last Z · Alliance Duel</div>
+      <h1 id="allianceName">Alliance Duel</h1>
+    </div>
+    <div class="weeknav">
+      <button class="iconbtn" id="prevWeek" aria-label="Previous week">‹</button>
+      <div class="weeklabel"><b id="weekLabel">—</b><span id="weekSub">&nbsp;</span></div>
+      <button class="iconbtn" id="nextWeek" aria-label="Next week">›</button>
+      <button class="btn ghost small" id="thisWeekBtn" hidden>This week</button>
+    </div>
+  </header>
+  <div class="hazard" aria-hidden="true"></div>
+
+  <div class="bar">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabbtn-week" data-tab="week" aria-selected="true">Week</button>
+      <button class="tab" role="tab" id="tabbtn-history" data-tab="history" aria-selected="false">History</button>
+      <button class="tab" role="tab" id="tabbtn-roster" data-tab="roster" aria-selected="false">Roster</button>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="addScoresBtn">+ Add scores</button>
+      <button class="btn" id="followBtn" hidden>Follow-up list</button>
+      <button class="btn" id="exportBtn" hidden>Export CSV</button>
+      <button class="btn" id="settingsBtn">Minimums</button>
+      <button class="btn" id="backupBtn">Backup</button>
+      <a class="btn" href="https://buy.stripe.com/7sYfZjgIE7CobLnbAydUY00" target="_blank" rel="noopener noreferrer">Support this project</a>
+    </div>
+  </div>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section id="tab-week" role="tabpanel" aria-labelledby="tabbtn-week">
+    <div id="weekEmpty" class="empty" hidden></div>
+    <div id="weekBody" hidden>
+      <div class="stats" id="stats"></div>
+      <div class="tools">
+        <input class="search" id="search" type="search" placeholder="Find a member" aria-label="Find a member">
+        <div class="seg" role="group" aria-label="Show">
+          <button id="fAll" aria-pressed="true">All</button>
+          <button id="fFlag" aria-pressed="false">Needs follow-up</button>
+        </div>
+        <div class="legend">
+          <span><i class="sw sw-below"></i>Below minimum</span>
+          <span><i class="sw sw-missed"></i>Missed a recorded day</span>
+          <span><i class="sw"></i>Excused</span>
+        </div>
+      </div>
+      <div class="tablewrap"><table class="grid" id="grid"></table></div>
+      <p class="hint" id="gridHint"></p>
+    </div>
+  </section>
+
+  <section id="tab-history" role="tabpanel" aria-labelledby="tabbtn-history" hidden>
+    <div id="historyBody"></div>
+  </section>
+
+  <section id="tab-roster" role="tabpanel" aria-labelledby="tabbtn-roster" hidden>
+    <div class="rostergrid">
+      <div class="card stack">
+        <h2>Add members</h2>
+        <label class="f" for="rosterAdd">Names, one per line
+          <textarea class="input" id="rosterAdd" rows="8" placeholder="Raven&#10;Grizzly&#10;Kestrel"></textarea>
+        </label>
+        <label class="f" for="rosterAddRank">Rank for these members
+          <select class="input" id="rosterAddRank">
+            <option value="">No rank</option><option>R5</option><option>R4</option><option>R3</option><option>R2</option><option selected>R1</option>
+          </select>
+        </label>
+        <div class="row"><button class="btn primary" id="rosterAddBtn">Add to roster</button></div>
+        <p class="hint">Reading screenshots also adds new names automatically. Renamed players keep their history: edit the name here and the old name still matches.</p>
+      </div>
+      <div class="card">
+        <div class="row spread"><h2>Roster</h2><span class="muted" id="rosterCount"></span></div>
+        <div class="scrollx" id="rosterList"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Add scores -->
+<dialog id="dlgScores" aria-labelledby="scTitle">
+  <div class="dlg">
+    <div class="dlg-h"><h2 id="scTitle">Add scores</h2><button class="iconbtn" data-close aria-label="Close">×</button></div>
+    <div class="dlg-b">
+      <div class="row spread">
+        <label class="f grow" for="scDay">Duel day
+          <select class="input" id="scDay"></select>
+        </label>
+        <span class="muted" id="scWeek"></span>
+      </div>
+      <div class="seg" role="group" aria-label="Score source">
+        <button id="scModeShots" aria-pressed="true">Screenshots</button>
+        <button id="scModePaste" aria-pressed="false">Paste text</button>
+      </div>
+      <div id="scShots" class="stack">
+        <label class="drop" id="scDrop" for="scFiles"><b>Choose screenshots</b><span>Tap to pick from your photos · or drop them here</span>
+          <input type="file" id="scFiles" class="vh" multiple accept="image/*">
+        </label>
+        <div class="stack tight">
+          <span class="hint flush">Or copy screenshots in your Photos app, then press and hold the box below and choose Paste.</span>
+          <div class="pastebox" id="scPasteBox" contenteditable="true" role="textbox" aria-label="Paste copied screenshots here" data-ph="Press and hold here, then Paste"></div>
+        </div>
+        <ul class="files" id="scFileList"></ul>
+        <p class="hint flush" id="scScreenshotPrivacy">In Alliance Duel, open the alliance member ranking for this day and screenshot each scroll of the list. Overlap is fine. Screenshots are read on this device; nothing is uploaded. You check every name before saving.</p>
+        <div class="row"><button class="btn primary" id="scRead">Read screenshots</button><button class="btn" id="scStop" hidden>Stop</button></div>
+      </div>
+      <div id="scPaste" class="stack" hidden>
+        <label class="f" for="scText">One player per line: name, then points
+          <textarea class="input mono" id="scText" rows="8" placeholder="Raven 3,240,000&#10;Grizzly 2.8m&#10;Kestrel 950k"></textarea>
+        </label>
+        <div class="row"><button class="btn primary" id="scParse">Read text</button></div>
+      </div>
+      <p class="status" id="scStatus" aria-live="polite"></p>
+      <div id="scReview" class="stack" hidden>
+        <div class="row spread"><h2 id="scRevTitle" class="h-sm"></h2><span class="muted" id="scRevCounts"></span></div>
+        <div class="tablewrap flush">
+          <table class="rev"><thead><tr><th>Read as</th><th class="num">Points</th><th>Member</th><th></th></tr></thead><tbody id="scRows"></tbody></table>
+        </div>
+      </div>
+    </div>
+    <div class="dlg-f"><span class="note" id="scNote"></span><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="scSave" disabled>Save scores</button></div>
+  </div>
+</dialog>
+
+<!-- Minimums and alliance name -->
+<dialog id="dlgSettings" aria-labelledby="stTitle">
+  <div class="dlg">
+    <div class="dlg-h"><h2 id="stTitle">Minimums</h2><button class="iconbtn" data-close aria-label="Close">×</button></div>
+    <div class="dlg-b">
+      <label class="f" for="stName">Alliance name
+        <input class="input" id="stName" maxlength="60" placeholder="Your alliance">
+      </label>
+      <div>
+        <div class="row spread end">
+          <label class="f grow" for="stAll">Same minimum every day
+            <input class="input" id="stAll" placeholder="e.g. 2m">
+          </label>
+          <button class="btn" id="stApply">Apply to all days</button>
+        </div>
+        <p class="hint">Members under a daily minimum or the weekly total minimum are flagged. The weekly minimum compares against scores recorded so far; it starts flagging once the first day has scores.</p>
+      </div>
+      <label class="f" for="stWeekly">Minimum weekly total
+        <input class="input" id="stWeekly" placeholder="no weekly minimum">
+      </label>
+      <div class="mins" id="stMins"></div>
+    </div>
+    <div class="dlg-f"><span class="note" id="stNote"></span><button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="stSave">Save</button></div>
+  </div>
+</dialog>
+
+<!-- Follow-up list -->
+<dialog id="dlgFollow" aria-labelledby="fuTitle">
+  <div class="dlg">
+    <div class="dlg-h"><h2 id="fuTitle">Follow-up list</h2><button class="iconbtn" data-close aria-label="Close">×</button></div>
+    <div class="dlg-b">
+      <label class="f" for="fuScope">Cover
+        <select class="input" id="fuScope"></select>
+      </label>
+      <textarea class="input" id="fuText" rows="12" readonly aria-label="Message to copy"></textarea>
+      <p class="hint flush">Paste this into alliance chat, mail or Discord.</p>
+    </div>
+    <div class="dlg-f"><button class="btn ghost" data-close>Close</button><button class="btn primary" id="fuCopy">Copy</button></div>
+  </div>
+</dialog>
+
+<!-- Backup and sharing -->
+<dialog id="dlgBackup" aria-labelledby="bkTitle">
+  <div class="dlg">
+    <div class="dlg-h"><h2 id="bkTitle">Backup &amp; share</h2><button class="iconbtn" data-close aria-label="Close">×</button></div>
+    <div class="dlg-b">
+      <p class="hint flush" id="bkWhere">Your scores are saved in this browser on this device. Save a backup now and then, and send it to other officers so they can load the same data.</p>
+      <div class="card stack">
+        <h3>Save a backup</h3>
+        <div class="row">
+          <button class="btn primary" id="bkDownload">Download backup file</button>
+          <button class="btn" id="bkShare" hidden>Share…</button>
+          <button class="btn" id="bkCopy">Copy as text</button>
+        </div>
+      </div>
+      <div class="card stack">
+        <h3>Load a backup</h3>
+        <div class="row">
+          <label class="btn" for="bkFile">Choose backup file<input type="file" id="bkFile" class="vh" accept=".json,application/json,text/plain"></label>
+        </div>
+        <label class="f" for="bkText">Or paste backup text
+          <textarea class="input mono" id="bkText" rows="4" placeholder='{"app":"alliance-duel-tracker", …}'></textarea>
+        </label>
+        <fieldset class="choice">
+          <legend>When loading</legend>
+          <label><input type="radio" name="bkMode" value="merge" checked> Combine with my data <span class="muted">(adds their members and fills empty scores; keeps yours where both have one)</span></label>
+          <label><input type="radio" name="bkMode" value="replace"> Replace my data <span class="muted">(everything here is overwritten)</span></label>
+        </fieldset>
+        <div class="row"><button class="btn primary" id="bkLoad">Load backup</button></div>
+        <p class="status" id="bkStatus" aria-live="polite"></p>
+      </div>
+    </div>
+    <div class="dlg-f"><button class="btn ghost" data-close>Close</button></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script type="module" src="js/main.js"></script>
+<noscript><p style="padding:16px">This tracker needs JavaScript turned on.</p></noscript>
+</body>
+</html>
